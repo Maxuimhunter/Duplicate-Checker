@@ -24,9 +24,24 @@ A Streamlit-based application to detect, analyze, and manage duplicate entries i
 
 ## 🚀 Getting Started
 
+### ⚠️ Important Notes
+
+#### About the Data
+- The sample Excel files included (`Employee_Data.xlsx` and `sample_employee_data.xlsx`) contain **completely fictional data**
+- All business names, employee information, and other details are **purely for demonstration purposes**
+- The data does **NOT** represent any real businesses, organisations, or individuals
+
+#### Performance Considerations
+- The application can handle Excel files up to **200MB** in size
+- Any more and it will be slower or may even crash **⚠️**
+- For optimal performance, we recommend files under **10,000 rows**
+- Processing time will increase with file size and complexity
+- The application includes built-in optimizations for handling larger datasets
+
 ### Prerequisites
 - Python 3.8+
 - pip (Python package manager)
+- At least 2GB of free RAM (4GB recommended for larger files)
 
 ### Installation
 
@@ -51,7 +66,10 @@ A Streamlit-based application to detect, analyze, and manage duplicate entries i
    ```bash
    python generate_sample_data.py
    ```
-   This creates `sample_employee_data.xlsx` with realistic test data.
+   This creates `sample_employee_data.xlsx` with **completely fictional test data**.
+   - The generated data includes random names, departments, and other fields
+   - No real personal or business information is used
+   - You can modify the generation script to create different test scenarios
 
 5. **Run the application**
    ```bash
