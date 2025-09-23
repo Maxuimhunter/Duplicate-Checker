@@ -336,67 +336,26 @@ def analyze_employee_data(df: pd.DataFrame) -> Dict[str, str]:
         df: DataFrame containing employee data
         
     Returns:
-        Dictionary containing generated insights and analysis data
+        Dictionary containing generated insights
     """
     try:
-        # Create a copy of the dataframe to avoid modifying the original
-        df_analysis = df.copy()
-        
         # Basic metrics
-        num_employees = len(df_analysis)
-        dept_counts = df_analysis['Department'].value_counts().to_dict()
-        avg_salary = df_analysis['Salary'].mean()
-        max_salary = df_analysis['Salary'].max()
-        min_salary = df_analysis['Salary'].min()
+        num_employees = len(df)
+        dept_counts = df['Department'].value_counts().to_dict()
+        avg_salary = df['Salary'].mean()
+        max_salary = df['Salary'].max()
+        min_salary = df['Salary'].min()
         salary_range = max_salary - min_salary
-        median_salary = df_analysis['Salary'].median()
-        salary_std = df_analysis['Salary'].std()
         
-        # Calculate salary distribution
-        salary_quartiles = df_analysis['Salary'].quantile([0.1, 0.25, 0.5, 0.75, 0.9]).to_dict()
-        
-        # Calculate salary bands
-        salary_bands = {
-            'Low (Bottom 25%)': (min_salary, salary_quartiles[0.25]),
-            'Lower Middle (25-50%)': (salary_quartiles[0.25], salary_quartiles[0.5]),
-            'Upper Middle (50-75%)': (salary_quartiles[0.5], salary_quartiles[0.75]),
-            'High (Top 25%)': (salary_quartiles[0.75], max_salary)
-        }
-        
-        # Calculate employees in each salary band
-        band_counts = {}
-        for band, (low, high) in salary_bands.items():
-            band_counts[band] = len(df_analysis[(df_analysis['Salary'] >= low) & (df_analysis['Salary'] <= high)])
-        
-        # Enhanced department analysis
+        # Department analysis
         dept_analysis = []
         for dept, count in dept_counts.items():
-            dept_df = df_analysis[df_analysis['Department'] == dept]
-            dept_avg = dept_df['Salary'].mean()
-            dept_median = dept_df['Salary'].median()
-            dept_min = dept_df['Salary'].min()
-            dept_max = dept_df['Salary'].max()
-            dept_std = dept_df['Salary'].std()
+            dept_avg = df[df['Department'] == dept]['Salary'].mean()
             dept_pct = (count / num_employees) * 100
-            
-            # Calculate salary distribution within department
-            dept_quartiles = dept_df['Salary'].quantile([0.25, 0.5, 0.75]).to_dict()
-            
-            # Calculate gender distribution if available
-            gender_dist = {}
-            if 'Gender' in df_analysis.columns:
-                gender_dist = dept_df['Gender'].value_counts().to_dict()
-            
             dept_analysis.append({
                 'name': dept,
                 'count': count,
                 'avg_salary': dept_avg,
-                'median_salary': dept_median,
-                'min_salary': dept_min,
-                'max_salary': dept_max,
-                'std_salary': dept_std,
-                'quartiles': dept_quartiles,
-                'gender_dist': gender_dist,
                 'pct': dept_pct
             })
         
@@ -409,257 +368,68 @@ def analyze_employee_data(df: pd.DataFrame) -> Dict[str, str]:
         # Executive Summary
         insights.append("## Executive Summary")
         insights.append(
-            f"This comprehensive analysis covers {num_employees} employees across {len(dept_counts)} distinct departments. "
-            f"The organization's compensation structure shows an average salary of ${avg_salary:,.2f} with significant variation, "
-            f"ranging from ${min_salary:,.2f} to ${max_salary:,.2f}. The median salary of ${median_salary:,.2f} "
-            f"indicates a {'' if median_salary > avg_salary else 'slightly '}right-skewed distribution "
-            f"of compensation across the workforce."
+            f"This analysis covers {num_employees} employees across {len(dept_counts)} departments. "
+            f"The average salary is ${avg_salary:,.2f} with a range from ${min_salary:,.2f} to ${max_salary:,.2f}."
         )
-        
-        # Add compensation distribution overview
-        insights.append("\n### Compensation Distribution Overview")
-        insights.append(f"- **Salary Range**: ${min_salary:,.2f} - ${max_salary:,.2f} (${salary_range:,.2f} range)")
-        insights.append(f"- **Average (Mean) Salary**: ${avg_salary:,.2f}")
-        insights.append(f"- **Median Salary**: ${median_salary:,.2f}")
-        insights.append(f"- **Standard Deviation**: ${salary_std:,.2f} ({(salary_std/avg_salary)*100:.1f}% of mean)")
-        
-        # Add salary band analysis
-        insights.append("\n### Salary Band Distribution")
-        for band, count in band_counts.items():
-            pct = (count / num_employees) * 100
-            insights.append(f"- **{band}**: {count} employees ({pct:.1f}% of workforce)")
-            
-            # Add quartile information for each band
-            if '25%' in band:
-                low, high = salary_bands[band]
-                insights.append(f"  - Salary range: ${low:,.2f} - ${high:,.2f}")
-                
-        # Add quartile analysis
-        insights.append("\n### Salary Quartile Analysis")
-        insights.append(f"- **25th Percentile (Q1)**: ${salary_quartiles[0.25]:,.2f}")
-        insights.append(f"- **50th Percentile (Median)**: ${salary_quartiles[0.5]:,.2f}")
-        insights.append(f"- **75th Percentile (Q3)**: ${salary_quartiles[0.75]:,.2f}")
-        iqr = salary_quartiles[0.75] - salary_quartiles[0.25]
-        insights.append(f"- **Interquartile Range (IQR)**: ${iqr:,.2f}")
-        
-        # Add outlier detection
-        lower_bound = salary_quartiles[0.25] - (1.5 * iqr)
-        upper_bound = salary_quartiles[0.75] + (1.5 * iqr)
-        outliers = df_analysis[(df_analysis['Salary'] < lower_bound) | (df_analysis['Salary'] > upper_bound)]
-        insights.append(f"- **Potential Outliers**: {len(outliers)} employees ({(len(outliers)/num_employees)*100:.1f}% of workforce) "
-                      f"with salaries outside ${lower_bound:,.2f} - ${upper_bound:,.2f}")
         
         # Department Analysis
         insights.append("\n## Workforce Composition")
         insights.append("### Department Distribution")
-        
-        # Add overall department statistics
-        insights.append(f"- **Total Departments**: {len(dept_analysis)}")
-        insights.append(f"- **Average Department Size**: {num_employees / len(dept_analysis):.1f} employees")
-        
-        # Add detailed department analysis
-        for i, dept in enumerate(dept_analysis, 1):
-            comp_ratio = (dept['avg_salary'] / avg_salary) * 100
+        for dept in dept_analysis:
             insights.append(
-                f"\n#### {i}. {dept['name']} Department\n"
-                f"- **Employees**: {dept['count']} ({dept['pct']:.1f}% of workforce)\n"
-                f"- **Salary Metrics**:\n"
-                f"  - Average: ${dept['avg_salary']:,.2f} ({(dept['avg_salary']/avg_salary - 1)*100:+.1f}% vs company average)\n"
-                f"  - Median: ${dept['median_salary']:,.2f}\n"
-                f"  - Range: ${dept['min_salary']:,.2f} - ${dept['max_salary']:,.2f}\n"
-                f"  - Standard Deviation: ${dept['std_salary']:,.2f} ({(dept['std_salary']/dept['avg_salary'])*100:.1f}% of mean)\n"
-                f"  - Compensation Ratio: {comp_ratio:.1f}%\n"
+                f"- **{dept['name']}**: {dept['count']} employees ({dept['pct']:.1f}% of workforce), "
+                f"Average Salary: ${dept['avg_salary']:,.2f}"
             )
-            
-            # Add quartile information
-            insights.append("  - **Salary Quartiles**:")
-            insights.append(f"    - Q1 (25th %ile): ${dept['quartiles'].get(0.25, 0):,.2f}")
-            insights.append(f"    - Q2 (Median): ${dept['quartiles'].get(0.5, 0):,.2f}")
-            insights.append(f"    - Q3 (75th %ile): ${dept['quartiles'].get(0.75, 0):,.2f}")
-            
-            # Add gender distribution if available
-            if dept['gender_dist']:
-                insights.append("  - **Gender Distribution**:")
-                for gender, count in dept['gender_dist'].items():
-                    pct = (count / dept['count']) * 100
-                    insights.append(f"    - {gender}: {count} employees ({pct:.1f}% of department)")
-                    
-                    # Add gender pay gap analysis
-                    if 'Gender' in df_analysis.columns and len(df_analysis['Gender'].unique()) > 1:
-                        gender_avg = df_analysis[(df_analysis['Department'] == dept['name']) & 
-                                              (df_analysis['Gender'] == gender)]['Salary'].mean()
-                        gap = ((gender_avg / dept['avg_salary']) - 1) * 100
-                        insights.append(f"      - Average Salary: ${gender_avg:,.2f} ({gap:+.1f}% vs department average)")
         
-        # Enhanced Position Analysis
-        if 'Position' in df_analysis.columns:
-            position_analysis = []
-            position_counts = df_analysis['Position'].value_counts().to_dict()
-            
-            insights.append("\n## Position Analysis")
-            insights.append("### Position Distribution")
-            
-            # Calculate position statistics
+        # Position Analysis
+        if 'Position' in df.columns:
+            position_counts = df['Position'].value_counts().to_dict()
+            insights.append("\n### Position Analysis")
             for position, count in position_counts.items():
-                pos_df = df_analysis[df_analysis['Position'] == position]
-                pos_avg = pos_df['Salary'].mean()
-                pos_median = pos_df['Salary'].median()
-                pos_min = pos_df['Salary'].min()
-                pos_max = pos_df['Salary'].max()
-                pos_std = pos_df['Salary'].std()
-                pos_pct = (count / num_employees) * 100
-                
-                position_analysis.append({
-                    'name': position,
-                    'count': count,
-                    'pct': pos_pct,
-                    'avg_salary': pos_avg,
-                    'median_salary': pos_median,
-                    'min_salary': pos_min,
-                    'max_salary': pos_max,
-                    'std_salary': pos_std
-                })
-            
-            # Sort positions by average salary (highest first)
-            position_analysis.sort(key=lambda x: x['avg_salary'], reverse=True)
-            
-            # Add detailed position analysis
-            for i, pos in enumerate(position_analysis, 1):
-                comp_ratio = (pos['avg_salary'] / avg_salary) * 100
-                insights.append(
-                    f"\n#### {i}. {pos['name']} Position\n"
-                    f"- **Employees**: {pos['count']} ({pos['pct']:.1f}% of workforce)\n"
-                    f"- **Salary Metrics**:\n"
-                    f"  - Average: ${pos['avg_salary']:,.2f} ({(pos['avg_salary']/avg_salary - 1)*100:+.1f}% vs company average)\n"
-                    f"  - Median: ${pos['median_salary']:,.2f}\n"
-                    f"  - Range: ${pos['min_salary']:,.2f} - ${pos['max_salary']:,.2f}\n"
-                    f"  - Standard Deviation: ${pos['std_salary']:,.2f}\n"
-                    f"  - Compensation Ratio: {comp_ratio:.1f}%"
-                )
+                insights.append(f"- {position}: {count} employees")
         
-        # Enhanced Compensation Analysis
-        insights.append("\n## In-Depth Compensation Analysis")
-        insights.append("### Compensation Structure")
-        
-        # Compensation ratios and metrics
-        compa_ratio = (median_salary / avg_salary) * 100
-        range_penetration = ((avg_salary - min_salary) / (max_salary - min_salary)) * 100
-        
-        insights.append(f"- **Compa-Ratio (Median/Mean)**: {compa_ratio:.1f}%")
-        insights.append(f"- **Range Penetration**: {range_penetration:.1f}%")
-        insights.append(f"- **Salary Range Spread**: {((max_salary - min_salary) / min_salary) * 100:.1f}%")
-        
-        # Add market position analysis
-        market_position = ""
-        if avg_salary > 100000:
-            market_position = "Above Market"
-        elif avg_salary > 70000:
-            market_position = "Market Competitive"
-        else:
-            market_position = "Below Market"
-            
-        insights.append(f"- **Market Position**: {market_position} (based on average salary of ${avg_salary:,.2f})")
-        
-        # Add pay equity analysis
-        if 'Gender' in df_analysis.columns and len(df_analysis['Gender'].unique()) > 1:
-            insights.append("\n### Pay Equity Analysis")
-            gender_pay = df_analysis.groupby('Gender')['Salary'].agg(['count', 'mean', 'median', 'std'])
-            
-            for gender, data in gender_pay.iterrows():
-                pct_of_workforce = (data['count'] / num_employees) * 100
-                pay_ratio = (data['mean'] / avg_salary) * 100
-                
-                insights.append(
-                    f"- **{gender} Employees**:\n"
-                    f"  - Count: {data['count']} ({pct_of_workforce:.1f}% of workforce)\n"
-                    f"  - Average Salary: ${data['mean']:,.2f} ({(data['mean']/avg_salary - 1)*100:+.1f}% vs company average)\n"
-                    f"  - Median Salary: ${data['median']:,.2f}\n"
-                    f"  - Standard Deviation: ${data['std']:,.2f}"
-                )
-            
-            # Calculate overall gender pay gap
-            if len(gender_pay) > 1:
-                genders = gender_pay.index.tolist()
-                gap = ((gender_pay.loc[genders[0], 'mean'] / gender_pay.loc[genders[1], 'mean']) - 1) * 100
-                insights.append(f"\n- **Gender Pay Gap**: {abs(gap):.1f}% in favor of {genders[0] if gap > 0 else genders[1]}")
-                
-                if abs(gap) > 5:  # Significant pay gap
-                    insights.append("  - **Note**: This pay gap exceeds the typical threshold of 5% and may require review.")
+        # Compensation Analysis
+        insights.append("\n## Compensation Analysis")
         
         # Highest and lowest paid departments
         highest_paid = max(dept_analysis, key=lambda x: x['avg_salary'])
         lowest_paid = min(dept_analysis, key=lambda x: x['avg_salary'])
         
-        # Add department compensation comparison
-        insights.append("### Department Compensation Comparison")
+        insights.append("### Department Compensation")
         insights.append(
-            f"- **Highest Paid Department**: {highest_paid['name']} (${highest_paid['avg_salary']:,.2f} average, "
-            f"{(highest_paid['avg_salary']/avg_salary - 1)*100:+.1f}% above company average)"
+            f"- **Highest Paid Department**: {highest_paid['name']} (${highest_paid['avg_salary']:,.2f} average)"
         )
         insights.append(
-            f"- **Lowest Paid Department**: {lowest_paid['name']} (${lowest_paid['avg_salary']:,.2f} average, "
-            f"{(lowest_paid['avg_salary']/avg_salary - 1)*100:+.1f}% vs company average)"
+            f"- **Lowest Paid Department**: {lowest_paid['name']} (${lowest_paid['avg_salary']:,.2f} average)"
         )
         
-        # Calculate department pay disparity
-        dept_pay_disparity = ((highest_paid['avg_salary'] - lowest_paid['avg_salary']) / lowest_paid['avg_salary']) * 100
-        insights.append(f"- **Department Pay Disparity**: {dept_pay_disparity:.1f}% between highest and lowest paid departments")
+        # Salary distribution
+        salary_quartiles = df['Salary'].quantile([0.25, 0.5, 0.75]).to_dict()
+        insights.append("\n### Salary Distribution")
+        insights.append(f"- **25th Percentile**: ${salary_quartiles[0.25]:,.2f}")
+        insights.append(f"- **Median (50th Percentile)**: ${salary_quartiles[0.5]:,.2f}")
+        insights.append(f"- **75th Percentile**: ${salary_quartiles[0.75]:,.2f}")
         
-        # Add detailed recommendations
-        insights.append("\n## Strategic Recommendations")
+        # Pay equity analysis (if gender data is available)
+        if 'Gender' in df.columns:
+            gender_pay = df.groupby('Gender')['Salary'].mean()
+            insights.append("\n### Pay Equity Analysis")
+            for gender, salary in gender_pay.items():
+                insights.append(f"- Average {gender} salary: ${salary:,.2f}")
         
-        # Compensation strategy recommendations
-        insights.append("### 1. Compensation Strategy")
-        insights.append("- **Conduct a comprehensive compensation review** to ensure internal equity and market competitiveness")
-        insights.append("- **Standardize salary ranges** across similar roles and departments")
-        insights.append("- **Implement pay transparency** guidelines to promote fairness and trust")
+        # Recommendations
+        insights.append("\n## Key Recommendations")
+        insights.append("1. **Review Compensation Structure**")
+        insights.append("   - Consider standardizing salary ranges across departments")
+        insights.append("   - Address any significant pay disparities")
         
-        # Workforce planning recommendations
-        insights.append("\n### 2. Workforce Planning")
-        insights.append(f"- **Review staffing levels** in {highest_paid['name']} (highest paid) vs {lowest_paid['name']} (lowest paid)")
-        insights.append("- **Develop retention strategies** for critical roles with high salary variance")
-        insights.append("- **Create career pathways** to support internal mobility and growth")
+        insights.append("\n2. **Workforce Planning**")
+        insights.append(f"   - {highest_paid['name']} has the highest average salary")
+        insights.append(f"   - {lowest_paid['name']} may need attention for retention")
         
-        # Budget and resource allocation
-        insights.append("\n### 3. Budget & Resource Allocation")
-        insights.append("- **Allocate budget** based on market data and internal equity metrics")
-        insights.append("- **Consider merit-based increases** tied to performance metrics")
-        insights.append("- **Invest in upskilling** to improve internal mobility and reduce external hiring costs")
-        
-        # Pay equity and diversity
-        if 'Gender' in df_analysis.columns and len(df_analysis['Gender'].unique()) > 1:
-            insights.append("\n### 4. Pay Equity & Diversity")
-            insights.append("- **Conduct a pay equity audit** to identify and address any unexplained pay gaps")
-            insights.append("- **Implement bias training** for managers involved in compensation decisions")
-            insights.append("- **Set diversity and inclusion goals** for leadership positions")
-        
-        # Key findings and action items
-        insights.append("\n## Key Findings & Action Items")
-        
-        # Top 3 key findings
-        insights.append("### Top 3 Key Findings")
-        insights.append(f"1. **Wide Salary Range**: The organization has a significant salary range from ${min_salary:,.2f} to ${max_salary:,.2f} "
-                      f"({((max_salary - min_salary) / min_salary) * 100:.1f}% range)")
-        
-        insights.append(f"2. **Department Disparity**: {highest_paid['name']} department earns {dept_pay_disparity:.1f}% more on average than {lowest_paid['name']}")
-        
-        if 'Gender' in df_analysis.columns and len(df_analysis['Gender'].unique()) > 1:
-            gender_gap = abs((gender_pay.iloc[0] / gender_pay.iloc[1] - 1) * 100)
-            insights.append(f"3. **Gender Pay Gap**: A {gender_gap:.1f}% pay gap exists between {gender_pay.index[0]} and {gender_pay.index[1]} employees")
-        else:
-            insights.append(f"3. **Compression Risk**: The ratio of highest to lowest paid employees is {max_salary/min_salary:.1f}:1")
-        
-        # Immediate action items
-        insights.append("\n### Immediate Action Items")
-        insights.append("1. **Review Outliers**: Examine employees with salaries outside the IQR range")
-        insights.append("2. **Department Equity**: Analyze compensation within each department for consistency")
-        insights.append("3. **Market Benchmarking**: Compare current salaries with industry standards")
-        
-        # Long-term considerations
-        insights.append("\n### Long-term Considerations")
-        insights.append("- **Performance-based Pay**: Link compensation to measurable performance metrics")
-        insights.append("- **Total Rewards Strategy**: Consider non-monetary benefits and recognition programs")
-        insights.append("- **Succession Planning**: Identify and develop internal talent for key positions")
+        insights.append("\n3. **Budget Allocation**")
+        insights.append("   - Allocate resources based on department size and needs")
+        insights.append("   - Consider market rates for competitive positioning")
         
         # Key Metrics Summary
         insights.append("\n## Key Metrics Summary")
@@ -693,147 +463,6 @@ def analyze_employee_data(df: pd.DataFrame) -> Dict[str, str]:
             'status': 'error',
             'message': error_msg
         }
-def export_to_excel(df: pd.DataFrame, analysis_data: Dict, sheet_name: str) -> BytesIO:
-    """
-    Export the employee data and analysis to an Excel file with multiple sheets.
-    
-    Args:
-        df: DataFrame containing the employee data
-        analysis_data: Dictionary containing analysis results
-        sheet_name: Name of the sheet being processed
-        
-    Returns:
-        BytesIO: In-memory file object containing the Excel file
-    """
-    # Create a BytesIO buffer for the Excel file
-    excel_buffer = BytesIO()
-    
-    # Create a Pandas Excel writer using XlsxWriter as the engine
-    with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
-        # Write the main data to the first sheet
-        df.to_excel(writer, sheet_name='Employee Data', index=False)
-        
-        # Create a summary sheet with key metrics
-        summary_data = []
-        
-        # Add basic metrics
-        summary_data.append(['Metric', 'Value'])
-        summary_data.append(['Total Employees', len(df)])
-        summary_data.append(['Average Salary', df['Salary'].mean()])
-        summary_data.append(['Median Salary', df['Salary'].median()])
-        summary_data.append(['Minimum Salary', df['Salary'].min()])
-        summary_data.append(['Maximum Salary', df['Salary'].max()])
-        
-        # Add department summary
-        if 'Department' in df.columns:
-            dept_summary = df.groupby('Department')['Salary'].agg(['count', 'mean', 'min', 'max', 'median'])
-            dept_summary.columns = ['Employee Count', 'Average Salary', 'Min Salary', 'Max Salary', 'Median Salary']
-            dept_summary = dept_summary.sort_values('Average Salary', ascending=False)
-            
-            # Add department data to summary
-            summary_data.append(['', ''])
-            summary_data.append(['Department Summary', ''])
-            summary_data.append(['Department', 'Employee Count', 'Avg Salary', 'Min Salary', 'Max Salary', 'Median Salary'])
-            
-            for dept, row in dept_summary.iterrows():
-                summary_data.append([
-                    dept,
-                    row['Employee Count'],
-                    row['Average Salary'],
-                    row['Min Salary'],
-                    row['Max Salary'],
-                    row['Median Salary']
-                ])
-        
-        # Write summary data to a new sheet
-        if len(summary_data) > 1:  # Ensure we have data rows
-            # Create a DataFrame with the correct number of columns
-            max_cols = max(len(row) for row in summary_data)
-            
-            # Ensure all rows have the same number of columns
-            padded_data = []
-            for row in summary_data[1:]:  # Skip header
-                padded_row = row + [''] * (max_cols - len(row))
-                padded_data.append(padded_row)
-            
-            # Create DataFrame with padded data
-            summary_df = pd.DataFrame(padded_data, columns=summary_data[0] + [''] * (max_cols - len(summary_data[0])))
-            summary_df.to_excel(writer, sheet_name='Summary', index=False)
-        
-            # Add charts to the summary sheet
-            workbook = writer.book
-            worksheet = writer.sheets['Summary']
-            
-            # Add a bar chart for department salaries
-            if 'Department' in df.columns and len(dept_summary) > 0:
-                chart = workbook.add_chart({'type': 'column'})
-                
-                # Get the department data range
-                dept_data_start = len(summary_data) - len(dept_summary)
-                dept_data_end = len(summary_data) - 1
-                
-                chart.add_series({
-                    'name': '=Summary!$C$1',
-                    'categories': f'=Summary!$A${dept_data_start + 1}:$A${dept_data_end}',
-                    'values': f'=Summary!$C${dept_data_start + 1}:$C${dept_data_end}',
-                    'data_labels': {'value': True, 'num_format': '$#,##0'}
-                })
-                
-                chart.set_title({'name': 'Average Salary by Department'})
-                chart.set_x_axis({'name': 'Department'})
-                chart.set_y_axis({'name': 'Salary ($)', 'major_gridlines': {'visible': True}})
-                
-                # Insert the chart into the worksheet
-                worksheet.insert_chart('H2', chart, {'x_scale': 1.5, 'y_scale': 1.5})
-        
-        # Add a sheet for detailed analysis
-        analysis_sheet = workbook.add_worksheet('Detailed Analysis')
-        
-        # Write the analysis text with formatting
-        analysis_text = analysis_data.get('insights', 'No analysis available')
-        analysis_lines = analysis_text.split('\n')
-        
-        # Add formatting for headers and sections
-        header_format = workbook.add_format({'bold': True, 'font_size': 14, 'bg_color': '#D9EAD3'})
-        section_format = workbook.add_format({'bold': True, 'font_size': 12, 'bg_color': '#E6E6E6'})
-        bold_format = workbook.add_format({'bold': True})
-        
-        row = 0
-        for line in analysis_lines:
-            if line.startswith('# '):  # Main header
-                analysis_sheet.write(row, 0, line[2:], header_format)
-                row += 2
-            elif line.startswith('## '):  # Section header
-                analysis_sheet.write(row, 0, line[3:], section_format)
-                row += 1
-            elif line.startswith('### '):  # Subsection
-                analysis_sheet.write(row, 1, line[4:], bold_format)
-                row += 1
-            elif line.startswith('- **'):  # Bold items in lists
-                # Extract bold text and regular text
-                parts = line.split('**')
-                col = 2
-                for i, part in enumerate(parts):
-                    if i % 2 == 1:  # Bold text
-                        analysis_sheet.write(row, col, part, bold_format)
-                    else:  # Regular text
-                        analysis_sheet.write(row, col, part)
-                    col += len(part)  # Adjust column position
-                row += 1
-            elif line.strip():  # Regular text
-                analysis_sheet.write(row, 0, line)
-                row += 1
-            else:  # Empty line
-                row += 1
-        
-        # Auto-adjust column widths
-        for i, width in enumerate([40, 20, 30, 30, 30, 30]):
-            analysis_sheet.set_column(i, i, width)
-    
-    # Reset the buffer position to the beginning
-    excel_buffer.seek(0)
-    return excel_buffer
-
 def create_pdf_with_summary(df: pd.DataFrame, sheet_name: str) -> BytesIO:
     """
     Create a PDF with summary statistics and AI insights using ReportLab.
@@ -1302,8 +931,8 @@ def main():
     else:
         sheet_names = [f"Sheet_{i+1}" for i in range(num_sheets)]
     
-    # Generate data button with a unique key
-    if st.button("🚀 Generate Employee Data", key="generate_button"):
+    # Generate data button
+    if st.button("🚀 Generate Employee Data"):
         with st.spinner("Generating data... This may take a moment..."):
             try:
                 # Set seed for reproducibility
@@ -1348,32 +977,19 @@ def main():
                     mime_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                     download_label = "💾 Download Excel File"
                 
-                # Create a base filename with timestamp
+                # Create a download button with shorter filename
                 timestamp = datetime.now().strftime("%y%m%d_%H%M")
-                base_filename = f"EmpData_{timestamp}"
-                filename = f"{base_filename}.{file_ext}"
+                filename = f"EmpData_{timestamp}.{file_ext}"
                 
                 st.success("✅ Data generated successfully!")
                 
-                # Ensure we have a preview DataFrame
-                preview_df = None
-                try:
-                    if output_format == 'PDF with Summary':
-                        preview_df = df.copy()  # Use the generated DataFrame for preview
-                        st.subheader("📊 Data Preview (First 5 Rows)")
-                        st.dataframe(preview_df.head())
-                    else:
-                        # For Excel, read the first sheet
-                        if hasattr(output_file, 'seek'):
-                            output_file.seek(0)  # Ensure we're at the start of the file
-                            
-                        with pd.ExcelFile(output_file) as xls:
-                            preview_df = pd.read_excel(xls, sheet_name=sheet_names[0])
-                            st.subheader("📊 Data Preview (First 5 Rows)")
-                            st.dataframe(preview_df.head())
-                except Exception as e:
-                    st.error(f"Error preparing data preview: {str(e)}")
-                    st.stop()  # Stop execution if we can't create a preview
+                # Show a preview of the first sheet
+                st.subheader("📊 Data Preview (First 5 Rows)")
+                if output_format == 'PDF with Summary':
+                    st.dataframe(df.head())
+                else:
+                    preview_df = pd.read_excel(output_file, sheet_name=sheet_names[0])
+                    st.dataframe(preview_df.head())
                 
                 # Show statistics
                 st.subheader("📈 Data Statistics")
@@ -1381,234 +997,82 @@ def main():
                 with col1:
                     st.metric("Total Employees", f"{num_employees:,}")
                 with col2:
-                    st.metric("Number of Sheets", len(sheet_names) if output_format != 'PDF with Summary' else 1)
+                    st.metric("Number of Sheets", len(sheet_names) if output_format == 'Excel' else 1)
                 with col3:
                     st.metric("Duplicate IDs", f"{int(num_employees * (duplicate_percentage / 100)):,}")
                 
-                # Export options section
-                st.subheader("📤 Export Options")
+                # Download button
+                st.download_button(
+                    label=download_label,
+                    data=output_file,
+                    file_name=filename,
+                    mime=mime_type
+                )
                 
-                # Create columns for the download buttons
-                col1, col2 = st.columns(2)
-                
-                # Excel Export
-                with col1:
-                    try:
-                        if output_format == 'PDF with Summary':
-                            # Generate Excel version if in PDF mode
-                            with st.spinner("Preparing Excel export..."):
-                                analysis_data = analyze_employee_data(df)
-                                excel_buffer = export_to_excel(df, analysis_data, sheet_names[0])
-                                
-                                # Ensure we have a file-like object
-                                if hasattr(excel_buffer, 'getvalue'):
-                                    excel_data = excel_buffer.getvalue()
-                                elif hasattr(excel_buffer, 'read'):
-                                    excel_data = excel_buffer.read()
-                                else:
-                                    raise ValueError("Invalid Excel buffer format")
-                                
-                                st.download_button(
-                                    label="📊 Download Excel Version",
-                                    data=excel_data,
-                                    file_name=f"employee_analysis_{sheet_names[0]}.xlsx",
-                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                    use_container_width=True,
-                                    key="excel_download"
-                                )
-                        else:
-                            # Already in Excel mode, use the generated file
-                            if hasattr(output_file, 'getvalue'):
-                                file_data = output_file.getvalue()
-                            elif hasattr(output_file, 'read'):
-                                file_data = output_file.read()
-                            else:
-                                file_data = output_file
-                                
-                            st.download_button(
-                                label="📊 Download Excel File",
-                                data=file_data,
-                                file_name=filename,
-                                mime=mime_type,
-                                use_container_width=True,
-                                key=f"excel_direct_download_{timestamp}",
-                                on_click=None  # This prevents the app from rerunning
-                            )
-                    except Exception as e:
-                        st.error(f"Error preparing Excel download: {str(e)}")
-                        st.exception(e)  # Show full traceback for debugging
-                
-                # PDF Export
-                with col2:
-                    try:
-                        if output_format != 'PDF with Summary':
-                            if preview_df is None:
-                                st.warning("No preview data available for PDF generation")
-                            else:
-                                with st.spinner("Generating PDF report..."):
-                                    pdf_buffer = create_pdf_with_summary(preview_df, sheet_names[0])
-                                    
-                                    # Ensure we have the PDF data in the correct format
-                                    if hasattr(pdf_buffer, 'getvalue'):
-                                        pdf_data = pdf_buffer.getvalue()
-                                    elif hasattr(pdf_buffer, 'read'):
-                                        pdf_data = pdf_buffer.read()
-                                    else:
-                                        pdf_data = pdf_buffer
-                                    
-                                    st.download_button(
-                                        label="📄 Download PDF Report",
-                                        data=pdf_data,
-                                        file_name=f"employee_analysis_{sheet_names[0]}.pdf",
-                                        mime="application/pdf",
-                                        use_container_width=True,
-                                        key="pdf_export"
-                                    )
-                        else:
-                            # Already in PDF mode, use the generated file
-                            if hasattr(output_file, 'getvalue'):
-                                file_data = output_file.getvalue()
-                            elif hasattr(output_file, 'read'):
-                                file_data = output_file.read()
-                            else:
-                                file_data = output_file
-                                
-                            st.download_button(
-                                label="📄 Download PDF File",
-                                data=file_data,
-                                file_name=filename,
-                                mime=mime_type,
-                                use_container_width=True,
-                                key=f"pdf_direct_download_{timestamp}",
-                                on_click=None  # This prevents the app from rerunning
-                            )
-                    except Exception as e:
-                        st.error(f"Error preparing PDF download: {str(e)}")
-                        st.exception(e)  # Show full traceback for debugging
-                
-                # End of the PDF download section
-                
-                # Add Detailed Summary Section
-                st.subheader("📋 Detailed Summary")
-                
-                if preview_df is not None:
-                    # Department Distribution
-                    st.markdown("#### Department Distribution")
-                    dept_counts = preview_df['Department'].value_counts()
-                    col1, col2 = st.columns([1, 2])
-                    with col1:
-                        st.dataframe(dept_counts)
-                    with col2:
-                        fig, ax = plt.subplots()
-                        dept_counts.plot(kind='bar', ax=ax, color='skyblue')
-                        plt.xticks(rotation=45, ha='right')
-                        plt.tight_layout()
-                        st.pyplot(fig)
-                    
-                    # Salary Statistics
-                    st.markdown("#### Salary Statistics")
-                    if 'Salary' in preview_df.columns:
-                        salary_stats = preview_df['Salary'].describe()
-                        st.dataframe(salary_stats)
-                        
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.markdown("##### Salary Distribution")
-                            fig, ax = plt.subplots()
-                            sns.histplot(preview_df['Salary'].dropna(), kde=True, ax=ax)
-                            st.pyplot(fig)
-                        with col2:
-                            st.markdown("##### Salary by Department")
-                            if 'Department' in preview_df.columns:
-                                fig, ax = plt.subplots(figsize=(8, 4))
-                                sns.boxplot(data=preview_df, x='Department', y='Salary', ax=ax)
-                                plt.xticks(rotation=45, ha='right')
-                                plt.tight_layout()
-                                st.pyplot(fig)
-                    
-                    # Missing Data Analysis
-                    st.markdown("#### Missing Data Analysis")
-                    missing_data = preview_df.isnull().sum()
-                    missing_data = missing_data[missing_data > 0]
-                    if len(missing_data) > 0:
-                        st.dataframe(missing_data.rename('Missing Values'))
-                    else:
-                        st.info("No missing data found in any column.")
-                
-                # Documentation section
-                st.markdown("---")
-                st.markdown("""
-### How to use this tool:
-1. **Configure** the data settings in the sidebar
-2. Select your preferred **Output Format** (Excel or PDF with Summary)
-3. Click the **Generate Employee Data** button
-4. **Download** the generated file(s) as needed
-
-### Features:
-- **Multiple Output Formats**:
-  - **Excel**: Standard spreadsheet format with multiple sheets
-  - **PDF with Summary**: Professional report with summary statistics and data tables
-- **Customizable Employee IDs**:
-  - Single prefix mode (e.g., EMP1001, EMP1002)
-  - Random prefix mode with custom weights (e.g., EMP1001, DEV1002, SAL1003)
-  - Custom ID number ranges
-- **Customizable Data**: Adjust departments, teams, and insurance providers
-- **Control Data Quality**: Set the percentage of duplicates and missing data
-- **Multiple Sheets (Excel only)**: Generate data across multiple sheets (e.g., by quarter or month)
-- **Realistic Data**: Names, roles, and other fields are generated realistically
-
-### Output Format Details:
-- **Excel**:
-  - Multiple sheets supported
-  - Auto-formatted tables with filters
-  - Conditional formatting for duplicates
-  - Auto-adjusted column widths
-  
-- **PDF with Summary**:
-  - Professional cover page
-  - Summary statistics and charts
-  - Data tables with proper pagination
-  - Clean, print-ready formatting
-
-### Employee ID Configuration:
-- **Single Prefix Mode**:
-  1. Uncheck "Use random prefixes"
-  2. Enter your desired prefix (e.g., EMP, DEV, SAL)
-  
-- **Random Prefix Mode**:
-  1. Check "Use random prefixes"
-  2. Adjust weights to control frequency (higher = more common)
-  3. Add/remove prefixes as needed
-  
-- **ID Number Range**:
-  - Set the starting and ending numbers for the numeric part of IDs
-  - Ensure the range is large enough for your number of employees
-  
-### Tips:
-- For large datasets, be patient as generation may take some time
-- The Excel file includes formatting and filtering for easy exploration
-- The PDF format is ideal for sharing reports with management
-- You can customize the data by editing the text areas in the sidebar
-- Save your favorite prefix combinations by noting down the weights
-- The system ensures unique IDs even with random prefixes
-
-### Note:
-- When using PDF output, only the first sheet will be included in the summary
-- For multi-sheet exports, use the Excel format
-""")
-
             except Exception as e:
-                st.error(f"An error occurred while generating the data: {str(e)}")
-                st.exception(e)  # This will show the full traceback in the app
-
-try:
-    # ... (rest of the code remains the same)
-    st.markdown("### Note:")
-    st.markdown("- When using PDF output, only the first sheet will be included in the summary")
-    st.markdown("- For multi-sheet exports, use the Excel format")
-except Exception as e:
-    st.error(f"An error occurred while generating the data: {str(e)}")
-    st.exception(e)  # This will show the full traceback in the app
+                st.error(f"❌ An error occurred: {str(e)}")
+    
+    # Add some documentation
+    with st.expander("ℹ️ How to use"):
+        st.markdown("""
+        ### How to use this tool:
+        1. **Configure** the data settings in the sidebar
+        2. Select your preferred **Output Format** (Excel or PDF with Summary)
+        3. Click the **Generate Employee Data** button
+        4. **Download** the generated file
+        
+        ### Features:
+        - **Multiple Output Formats**:
+          - **Excel**: Standard spreadsheet format with multiple sheets
+          - **PDF with Summary**: Professional report with summary statistics and data tables
+        - **Customizable Employee IDs**:
+          - Single prefix mode (e.g., EMP1001, EMP1002)
+          - Random prefix mode with custom weights (e.g., EMP1001, DEV1002, SAL1003)
+          - Custom ID number ranges
+        - **Customizable Data**: Adjust departments, teams, and insurance providers
+        - **Control Data Quality**: Set the percentage of duplicates and missing data
+        - **Multiple Sheets (Excel only)**: Generate data across multiple sheets (e.g., by quarter or month)
+        - **Realistic Data**: Names, roles, and other fields are generated realistically
+        
+        ### Output Format Details:
+        - **Excel**:
+          - Multiple sheets supported
+          - Auto-formatted tables with filters
+          - Conditional formatting for duplicates
+          - Auto-adjusted column widths
+          
+        - **PDF with Summary**:
+          - Professional cover page
+          - Summary statistics and charts
+          - Data tables with proper pagination
+          - Clean, print-ready formatting
+        
+        ### Employee ID Configuration:
+        - **Single Prefix Mode**:
+          1. Uncheck "Use random prefixes"
+          2. Enter your desired prefix (e.g., EMP, DEV, SAL)
+          
+        - **Random Prefix Mode**:
+          1. Check "Use random prefixes"
+          2. Adjust weights to control frequency (higher = more common)
+          3. Add/remove prefixes as needed
+          
+        - **ID Number Range**:
+          - Set the starting and ending numbers for the numeric part of IDs
+          - Ensure the range is large enough for your number of employees
+          
+        ### Tips:
+        - For large datasets, be patient as generation may take some time
+        - The Excel file includes formatting and filtering for easy exploration
+        - The PDF format is ideal for sharing reports with management
+        - You can customize the data by editing the text areas in the sidebar
+        - Save your favorite prefix combinations by noting down the weights
+        - The system ensures unique IDs even with random prefixes
+        
+        ### Note:
+        - When using PDF output, only the first sheet will be included in the summary
+        - For multi-sheet exports, use the Excel format
+        """)
 
 if __name__ == "__main__":
     main()
