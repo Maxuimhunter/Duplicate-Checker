@@ -1,6 +1,6 @@
 # Excel Sample Data Generator
 
-A Streamlit-based web application that generates realistic employee data and exports it to Excel, complete with AI-powered insights and professional PDF reporting.
+A Streamlit-based web application that generates realistic employee data and exports it to Excel, complete with AI-powered insights and professional PDF reporting. This tool is perfect for testing, demonstrations, and training purposes where realistic but synthetic employee data is needed.
 
 ## Features
 
@@ -8,16 +8,38 @@ A Streamlit-based web application that generates realistic employee data and exp
   - Generate employee records with realistic names, emails, and job details
   - Customize the number of records (default: 100)
   - Control data distribution across departments and positions
+  - Generate duplicate records with configurable frequency
+  - Include missing data for realistic testing scenarios
+
+- **Advanced ID Generation**:
+  - Support for custom ID prefixes (e.g., 'EMP', 'DEV')
+  - Configurable ID ranges and formats
+  - Weighted random prefix selection
+  - Duplicate ID generation control (0-100%)
 
 - **AI-Powered Analysis**:
   - Automatic generation of data insights using Ollama's AI
   - Comprehensive analysis of workforce distribution and compensation
   - Data quality assessment and HR recommendations
+  - Statistical analysis of employee demographics
 
 - **Professional Reporting**:
-  - Export data to Excel with formatted worksheets
+  - Export data to Excel with multiple formatted worksheets
   - Generate detailed PDF reports with visualizations
   - Clean, professional document formatting
+  - Multiple output format options
+
+## Recent Updates
+
+### Added
+- Support for multiple Excel sheets in a single workbook
+- Enhanced data validation and error handling
+- More realistic salary distribution based on roles and departments
+- Improved duplicate record generation
+- Better handling of missing data scenarios
+- More detailed analysis and reporting
+- Support for team assignments and project allocations
+- Performance optimizations for large datasets
 
 ## Prerequisites
 
@@ -31,6 +53,9 @@ A Streamlit-based web application that generates realistic employee data and exp
   - reportlab
   - python-dotenv
   - ollama
+  - matplotlib
+  - seaborn
+  - xlsxwriter
 
 ## Installation
 
@@ -95,21 +120,53 @@ A Streamlit-based web application that generates realistic employee data and exp
 ## Best Practices
 
 1. **For Large Datasets**:
-   - Generate data in smaller batches
-   - Consider using the command-line version for headless operation
+   - Generate data in smaller batches (e.g., 10,000 records at a time)
+   - Use the command-line version for headless operation
    - Close other memory-intensive applications
+   - Consider increasing Python's memory limits if needed
 
 2. **For Better Performance**:
    - Use the latest version of all dependencies
-   - Run the application on a machine with sufficient RAM
-   - Consider using a virtual environment
+   - Run the application on a machine with sufficient RAM (8GB+ recommended for large datasets)
+   - Use a virtual environment to avoid dependency conflicts
+   - Disable AI analysis when not needed for faster generation
 
-3. **Troubleshooting**:
+3. **For Realistic Data**:
+   - Adjust the duplicate percentage based on your testing needs
+   - Use the missing data feature to test data quality scenarios
+   - Customize department and role distributions to match your organization
+
+4. **Troubleshooting**:
    - Check the console for error messages
    - Verify that Ollama is running if AI features aren't working
    - Clear the browser cache if the UI becomes unresponsive
+   - Check disk space before generating large files
+   - Ensure you have write permissions in the output directory
 
 ## About This Project
 
 > "I wanted to make testing easier, so I created a script that generates realistic test subject data with random information. This tool was born out of the need for quick, realistic datasets for development and testing purposes."
+
+## Version History
+
+### v1.0.0 (2024-09-23)
+- Initial release with basic employee data generation
+- Excel and PDF export capabilities
+- Basic AI-powered analysis
+
+### v1.1.0 (2025-09-21)
+- Added support for multiple Excel sheets
+- Enhanced data generation with more realistic distributions
+- Improved duplicate record handling
+- Better error handling and validation
+- Performance optimizations
+- More detailed reporting and analysis
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
